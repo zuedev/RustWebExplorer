@@ -4,3 +4,18 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+
+[[bench]]
+name = "url_operations"
+harness = false
+
+[[bench]]
+name = "path_parsing"
+harness = false
+
+[[bench]]
+name = "file_operations"
+harness = false
+
+[dev-dependencies]
+criterion = "0.5"

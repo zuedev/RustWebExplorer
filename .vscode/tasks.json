@@ -1,0 +1,41 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Run Benchmarks",
+      "type": "shell",
+      "command": "cargo",
+      "args": ["bench"],
+      "group": "test",
+      "isBackground": false,
+      "problemMatcher": []
+    },
+    {
+      "label": "Run URL Operations Benchmarks",
+      "type": "shell",
+      "command": "cargo",
+      "args": ["bench", "--bench", "url_operations"],
+      "group": "test",
+      "isBackground": false,
+      "problemMatcher": []
+    },
+    {
+      "label": "Run Path Parsing Benchmarks",
+      "type": "shell",
+      "command": "cargo",
+      "args": ["bench", "--bench", "path_parsing"],
+      "group": "test",
+      "isBackground": false,
+      "problemMatcher": []
+    },
+    {
+      "label": "Run File Operations Benchmarks",
+      "type": "shell",
+      "command": "cargo",
+      "args": ["bench", "--bench", "file_operations"],
+      "group": "test",
+      "isBackground": false,
+      "problemMatcher": []
+    }
+  ]
+}
