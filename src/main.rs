@@ -315,3 +315,251 @@ fn main() -> std::io::Result<()> {
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::Path;
+
+    #[test]
+    fn test_url_decode_basic() {
+        assert_eq!(url_decode("hello%20world"), "hello world");
+        assert_eq!(url_decode("test%22quotes%22"), "test\"quotes\"");
+        assert_eq!(url_decode("no%20encoding"), "no encoding");
+    }
+
+    #[test]
+    fn test_url_decode_special_chars() {
+        assert_eq!(url_decode("path%2Fwith%2Fslashes"), "path/with/slashes");
+        assert_eq!(url_decode("hash%23tag"), "hash#tag");
+        assert_eq!(url_decode("percent%25sign"), "percent%sign");
+        assert_eq!(url_decode("ampersand%26symbol"), "ampersand&symbol");
+    }
+
+    #[test]
+    fn test_url_decode_invalid_encoding() {
+        // Invalid hex sequences should be preserved as characters
+        assert_eq!(url_decode("test%GG"), "test%GG");
+        // Incomplete sequence gets padded with '0'
+        assert_eq!(url_decode("test%1"), "test\u{10}"); // %10 -> character 16
+    }
+
+    #[test]
+    fn test_url_decode_no_encoding() {
+        assert_eq!(url_decode("plain_text"), "plain_text");
+        assert_eq!(url_decode(""), "");
+    }
+
+    #[test]
+    fn test_url_encode_basic() {
+        assert_eq!(url_encode("hello world"), "hello%20world");
+        assert_eq!(url_encode("test\"quotes\""), "test%22quotes%22");
+    }
+
+    #[test]
+    fn test_url_encode_special_chars() {
+        assert_eq!(url_encode("path/with/slashes"), "path%2Fwith%2Fslashes");
+        assert_eq!(url_encode("hash#tag"), "hash%23tag");
+        assert_eq!(url_encode("percent%sign"), "percent%25sign");
+        assert_eq!(url_encode("ampersand&symbol"), "ampersand%26symbol");
+        assert_eq!(url_encode("plus+sign"), "plus%2Bsign");
+        assert_eq!(url_encode("question?mark"), "question%3Fmark");
+    }
+
+    #[test]
+    fn test_url_encode_safe_chars() {
+        assert_eq!(url_encode("safe-chars_123.~"), "safe-chars_123.~");
+        assert_eq!(url_encode("AlphaNumeric123"), "AlphaNumeric123");
+    }
+
+    #[test]
+    fn test_url_encode_empty() {
+        assert_eq!(url_encode(""), "");
+    }
+
+    #[test]
+    fn test_get_mime_type_images() {
+        assert_eq!(get_mime_type(Path::new("test.jpg")), "image/jpeg");
+        assert_eq!(get_mime_type(Path::new("test.jpeg")), "image/jpeg");
+        assert_eq!(get_mime_type(Path::new("test.png")), "image/png");
+        assert_eq!(get_mime_type(Path::new("test.gif")), "image/gif");
+        assert_eq!(get_mime_type(Path::new("test.bmp")), "image/bmp");
+        assert_eq!(get_mime_type(Path::new("test.webp")), "image/webp");
+        assert_eq!(get_mime_type(Path::new("test.svg")), "image/svg+xml");
+        assert_eq!(get_mime_type(Path::new("test.ico")), "image/x-icon");
+        assert_eq!(get_mime_type(Path::new("test.tiff")), "image/tiff");
+        assert_eq!(get_mime_type(Path::new("test.tif")), "image/tiff");
+    }
+
+    #[test]
+    fn test_get_mime_type_videos() {
+        assert_eq!(get_mime_type(Path::new("test.mp4")), "video/mp4");
+        assert_eq!(get_mime_type(Path::new("test.webm")), "video/webm");
+        assert_eq!(get_mime_type(Path::new("test.ogg")), "video/ogg");
+        assert_eq!(get_mime_type(Path::new("test.mov")), "video/quicktime");
+        assert_eq!(get_mime_type(Path::new("test.avi")), "video/x-msvideo");
+        assert_eq!(get_mime_type(Path::new("test.mkv")), "video/x-matroska");
+        assert_eq!(get_mime_type(Path::new("test.wmv")), "video/x-ms-wmv");
+        assert_eq!(get_mime_type(Path::new("test.flv")), "video/x-flv");
+        assert_eq!(get_mime_type(Path::new("test.m4v")), "video/x-m4v");
+    }
+
+    #[test]
+    fn test_get_mime_type_case_insensitive() {
+        assert_eq!(get_mime_type(Path::new("test.JPG")), "image/jpeg");
+        assert_eq!(get_mime_type(Path::new("test.MP4")), "video/mp4");
+        assert_eq!(get_mime_type(Path::new("test.PnG")), "image/png");
+    }
+
+    #[test]
+    fn test_get_mime_type_unknown() {
+        assert_eq!(get_mime_type(Path::new("test.txt")), "text/plain");
+        assert_eq!(get_mime_type(Path::new("test.unknown")), "text/plain");
+        assert_eq!(get_mime_type(Path::new("test")), "text/plain");
+    }
+
+    #[test]
+    fn test_is_image_file() {
+        assert!(is_image_file(Path::new("test.jpg")));
+        assert!(is_image_file(Path::new("test.jpeg")));
+        assert!(is_image_file(Path::new("test.png")));
+        assert!(is_image_file(Path::new("test.gif")));
+        assert!(is_image_file(Path::new("test.bmp")));
+        assert!(is_image_file(Path::new("test.webp")));
+        assert!(is_image_file(Path::new("test.svg")));
+        assert!(is_image_file(Path::new("test.ico")));
+        assert!(is_image_file(Path::new("test.tiff")));
+        assert!(is_image_file(Path::new("test.tif")));
+        
+        // Case insensitive
+        assert!(is_image_file(Path::new("test.JPG")));
+        assert!(is_image_file(Path::new("test.PNG")));
+    }
+
+    #[test]
+    fn test_is_not_image_file() {
+        assert!(!is_image_file(Path::new("test.mp4")));
+        assert!(!is_image_file(Path::new("test.txt")));
+        assert!(!is_image_file(Path::new("test.unknown")));
+        assert!(!is_image_file(Path::new("test")));
+    }
+
+    #[test]
+    fn test_is_video_file() {
+        assert!(is_video_file(Path::new("test.mp4")));
+        assert!(is_video_file(Path::new("test.webm")));
+        assert!(is_video_file(Path::new("test.ogg")));
+        assert!(is_video_file(Path::new("test.mov")));
+        assert!(is_video_file(Path::new("test.avi")));
+        assert!(is_video_file(Path::new("test.mkv")));
+        assert!(is_video_file(Path::new("test.wmv")));
+        assert!(is_video_file(Path::new("test.flv")));
+        assert!(is_video_file(Path::new("test.m4v")));
+        
+        // Case insensitive
+        assert!(is_video_file(Path::new("test.MP4")));
+        assert!(is_video_file(Path::new("test.AVI")));
+    }
+
+    #[test]
+    fn test_is_not_video_file() {
+        assert!(!is_video_file(Path::new("test.jpg")));
+        assert!(!is_video_file(Path::new("test.txt")));
+        assert!(!is_video_file(Path::new("test.unknown")));
+        assert!(!is_video_file(Path::new("test")));
+    }
+
+    #[test]
+    fn test_parse_requested_path_root() {
+        let request = "GET / HTTP/1.1\r\nHost: localhost\r\n\r\n";
+        let result = parse_requested_path(request);
+        assert!(result.is_some());
+        // Should return current directory for root path
+        let expected = std::env::current_dir().unwrap();
+        assert_eq!(result.unwrap(), expected);
+    }
+
+    #[test]
+    fn test_parse_requested_path_invalid_request() {
+        let request = "INVALID REQUEST";
+        let result = parse_requested_path(request);
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn test_parse_requested_path_malformed() {
+        let request = "GET";
+        let result = parse_requested_path(request);
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn test_parse_requested_path_empty() {
+        let request = "";
+        let result = parse_requested_path(request);
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn test_parse_requested_path_with_encoding() {
+        let request = "GET /tests%2Fsample.jpg HTTP/1.1\r\nHost: localhost\r\n\r\n";
+        let result = parse_requested_path(request);
+        // This should work if the tests/sample.jpg file exists
+        if result.is_some() {
+            let path = result.unwrap();
+            assert!(path.to_string_lossy().contains("sample.jpg"));
+        }
+    }
+
+    #[test]
+    fn test_parse_requested_path_prevents_directory_traversal() {
+        let request = "GET /../etc/passwd HTTP/1.1\r\nHost: localhost\r\n\r\n";
+        let result = parse_requested_path(request);
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn test_parse_requested_path_prevents_absolute_paths() {
+        let request = "GET /C:/Windows/System32 HTTP/1.1\r\nHost: localhost\r\n\r\n";
+        let result = parse_requested_path(request);
+        // Should not allow absolute paths outside the current directory
+        if result.is_some() {
+            let path = result.unwrap();
+            let current_dir = std::env::current_dir().unwrap();
+            assert!(path.starts_with(&current_dir));
+        }
+    }
+
+    #[test]
+    fn test_url_encode_decode_roundtrip() {
+        let original = "hello world!@#$%^&*()";
+        let encoded = url_encode(original);
+        let decoded = url_decode(&encoded);
+        assert_eq!(decoded, original);
+    }
+
+    #[test]
+    fn test_url_encode_decode_with_spaces() {
+        let original = "file with spaces.txt";
+        let encoded = url_encode(original);
+        assert_eq!(encoded, "file%20with%20spaces.txt");
+        let decoded = url_decode(&encoded);
+        assert_eq!(decoded, original);
+    }
+
+    #[test]
+    fn test_handle_request_malformed() {
+        let request = "INVALID REQUEST FORMAT";
+        let response = handle_request(request);
+        let response_str = String::from_utf8_lossy(&response);
+        assert!(response_str.contains("400 Bad Request"));
+    }
+
+    #[test]
+    fn test_handle_request_empty() {
+        let request = "";
+        let response = handle_request(request);
+        let response_str = String::from_utf8_lossy(&response);
+        assert!(response_str.contains("400 Bad Request"));
+    }
+}
