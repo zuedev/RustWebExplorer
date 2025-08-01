@@ -117,24 +117,23 @@ fn is_image_file(file_path: &Path) -> bool {
     }
 }
 
-fn generate_file_response(file_path: &Path) -> String {
+fn generate_file_response(file_path: &Path) -> Vec<u8> {
     let mime_type = get_mime_type(file_path);
     
     if is_image_file(file_path) {
         // Handle image files as binary
         match fs::read(file_path) {
             Ok(contents) => {
-                let mut response = format!(
+                let header = format!(
                     "HTTP/1.1 200 OK\r\nContent-Type: {}\r\nContent-Length: {}\r\n\r\n",
                     mime_type,
                     contents.len()
                 );
-                // Convert binary data to string for HTTP response
-                // Note: This is a simple approach; a proper HTTP server would handle binary differently
-                response.push_str(&String::from_utf8_lossy(&contents));
+                let mut response = header.into_bytes();
+                response.extend_from_slice(&contents);
                 response
             }
-            Err(_) => "HTTP/1.1 500 Internal Server Error\r\n\r\nError reading image file".to_string(),
+            Err(_) => "HTTP/1.1 500 Internal Server Error\r\n\r\nError reading image file".as_bytes().to_vec(),
         }
     } else {
         // Handle text files
@@ -142,17 +141,17 @@ fn generate_file_response(file_path: &Path) -> String {
             Ok(contents) => format!(
                 "HTTP/1.1 200 OK\r\nContent-Type: {}\r\n\r\n{}",
                 mime_type, contents
-            ),
-            Err(_) => "HTTP/1.1 500 Internal Server Error\r\n\r\nError reading file".to_string(),
+            ).into_bytes(),
+            Err(_) => "HTTP/1.1 500 Internal Server Error\r\n\r\nError reading file".as_bytes().to_vec(),
         }
     }
 }
 
-fn generate_directory_response(dir_path: &Path, tail: &str) -> String {
+fn generate_directory_response(dir_path: &Path, tail: &str) -> Vec<u8> {
     let paths = match fs::read_dir(dir_path) {
         Ok(entries) => entries.filter_map(Result::ok).map(|entry| entry.path()).collect::<Vec<_>>(),
         Err(_) => {
-            return "HTTP/1.1 500 Internal Server Error\r\n\r\nError reading directory".to_string();
+            return "HTTP/1.1 500 Internal Server Error\r\n\r\nError reading directory".as_bytes().to_vec();
         }
     };
 
@@ -225,10 +224,10 @@ fn generate_directory_response(dir_path: &Path, tail: &str) -> String {
 
     response.push_str("</body></html>");
 
-    format!("HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n{}", response)
+    format!("HTTP/1.1 200 OK\r\nContent-Type: text/html\r\n\r\n{}", response).into_bytes()
 }
 
-fn handle_request(request: &str) -> String {
+fn handle_request(request: &str) -> Vec<u8> {
     if let Some(current_path) = parse_requested_path(request) {
         if current_path.is_file() {
             return generate_file_response(&current_path);
@@ -252,7 +251,7 @@ fn handle_request(request: &str) -> String {
             return generate_directory_response(&current_path, &tail);
         }
     }
-    "HTTP/1.1 400 Bad Request\r\n\r\nBad Request".to_string()
+    "HTTP/1.1 400 Bad Request\r\n\r\nBad Request".as_bytes().to_vec()
 }
 
 fn main() -> std::io::Result<()> {
@@ -271,7 +270,7 @@ fn main() -> std::io::Result<()> {
                     };
                     let request = String::from_utf8_lossy(&buffer[..bytes_read]);
                     let response = handle_request(&request);
-                    if let Err(_) = stream.write_all(response.as_bytes()) {}
+                    if let Err(_) = stream.write_all(&response) {}
                     if let Err(_) = stream.flush() {}
                 });
             }
