@@ -3,11 +3,53 @@ use std::io::{Read, Write};
 use std::net::TcpListener;
 use std::path::{Path, PathBuf};
 
+fn url_decode(input: &str) -> String {
+    let mut result = String::new();
+    let mut chars = input.chars();
+    
+    while let Some(ch) = chars.next() {
+        if ch == '%' {
+            let hex1 = chars.next().unwrap_or('0');
+            let hex2 = chars.next().unwrap_or('0');
+            if let Ok(byte) = u8::from_str_radix(&format!("{}{}", hex1, hex2), 16) {
+                result.push(byte as char);
+            } else {
+                result.push(ch);
+                result.push(hex1);
+                result.push(hex2);
+            }
+        } else {
+            result.push(ch);
+        }
+    }
+    result
+}
+
+fn url_encode(input: &str) -> String {
+    input.chars()
+        .map(|c| match c {
+            ' ' => "%20".to_string(),
+            '"' => "%22".to_string(),
+            '#' => "%23".to_string(),
+            '%' => "%25".to_string(),
+            '&' => "%26".to_string(),
+            '+' => "%2B".to_string(),
+            '?' => "%3F".to_string(),
+            _ if c.is_ascii_alphanumeric() || "-_.~".contains(c) => c.to_string(),
+            _ => format!("%{:02X}", c as u8),
+        })
+        .collect()
+}
+
 fn parse_requested_path(request: &str) -> Option<PathBuf> {
     let mut lines = request.lines();
     if let Some(first_line) = lines.next() {
-        if let Some(path) = first_line.split_whitespace().nth(1) {
-            let tail = path.trim_start_matches('/');
+        // Parse HTTP request line: "GET /path HTTP/1.1"
+        let parts: Vec<&str> = first_line.splitn(3, ' ').collect();
+        if parts.len() >= 2 {
+            let url_path = parts[1];
+            let decoded_path = url_decode(url_path);
+            let tail = decoded_path.trim_start_matches('/');
             let root = match std::env::current_dir() {
                 Ok(dir) => dir,
                 Err(_) => return None,
@@ -102,7 +144,7 @@ fn generate_directory_response(dir_path: &Path, tail: &str) -> String {
             let parent_url = tail.rsplit_once('/').map(|(base, _)| base).unwrap_or("");
             response.push_str(&format!(
                 "&#8592; <a href=\"/{}\">Parent Directory</a><br><br>",
-                parent_url
+                url_encode(parent_url)
             ));
         }
     }
@@ -110,9 +152,10 @@ fn generate_directory_response(dir_path: &Path, tail: &str) -> String {
     for dir in directories {
         if let Some(name) = dir.file_name().and_then(|n| n.to_str()) {
             let rel_path = Path::new(tail).join(name);
+            let encoded_path = url_encode(&rel_path.display().to_string());
             response.push_str(&format!(
                 "&#128193; <a href=\"/{}\">{}</a><br>",
-                rel_path.display(),
+                encoded_path,
                 name
             ));
         }
@@ -121,9 +164,10 @@ fn generate_directory_response(dir_path: &Path, tail: &str) -> String {
     for file in files {
         if let Some(name) = file.file_name().and_then(|n| n.to_str()) {
             let rel_path = Path::new(tail).join(name);
+            let encoded_path = url_encode(&rel_path.display().to_string());
             response.push_str(&format!(
                 "&#128196; <a href=\"/{}\">{}</a><br>",
-                rel_path.display(),
+                encoded_path,
                 name
             ));
         }
@@ -139,13 +183,23 @@ fn handle_request(request: &str) -> String {
         if current_path.is_file() {
             return generate_file_response(&current_path);
         } else if current_path.is_dir() {
+            // Extract and decode the URL path properly
             let tail = request
                 .lines()
                 .next()
-                .and_then(|line| line.split_whitespace().nth(1))
-                .unwrap_or("")
-                .trim_start_matches('/');
-            return generate_directory_response(&current_path, tail);
+                .and_then(|line| {
+                    let parts: Vec<&str> = line.splitn(3, ' ').collect();
+                    if parts.len() >= 2 {
+                        Some(parts[1])
+                    } else {
+                        None
+                    }
+                })
+                .map(|url_path| url_decode(url_path))
+                .unwrap_or_default()
+                .trim_start_matches('/')
+                .to_string();
+            return generate_directory_response(&current_path, &tail);
         }
     }
     "HTTP/1.1 400 Bad Request\r\n\r\nBad Request".to_string()
