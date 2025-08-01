@@ -193,11 +193,19 @@ fn generate_directory_response(dir_path: &Path, tail: &str) -> Vec<u8> {
         <html>
         <head>
             <style>
-                body {{ font-family: monospace; background: #fff; color: #111; }}
-                a {{ color: #0000ff; }}
+                body {{ font-family: monospace; background: #fff; color: #111; margin: 20px; }}
+                a {{ color: #0000ff; text-decoration: none; }}
+                a:hover {{ text-decoration: underline; }}
+                table {{ border-collapse: collapse; width: 100%; margin-top: 20px; }}
+                th, td {{ padding: 8px 12px; text-align: left; border-bottom: 1px solid #ddd; }}
+                th {{ background-color: #f5f5f5; font-weight: bold; }}
+                .actions {{ white-space: nowrap; }}
+                .actions a {{ margin-right: 10px; }}
                 @media (prefers-color-scheme: dark) {{
                     body {{ background: #111111; color: #ffffff; }}
                     a {{ color: #00ff00; }}
+                    th {{ background-color: #333; }}
+                    th, td {{ border-bottom: 1px solid #555; }}
                 }}
             </style>
         </head>
@@ -220,12 +228,14 @@ fn generate_directory_response(dir_path: &Path, tail: &str) -> Vec<u8> {
         }
     }
 
+    response.push_str("<table><thead><tr><th>Name</th><th>Actions</th></tr></thead><tbody>");
+
     for dir in directories {
         if let Some(name) = dir.file_name().and_then(|n| n.to_str()) {
             let rel_path = Path::new(tail).join(name);
             let encoded_path = url_encode(&rel_path.display().to_string());
             response.push_str(&format!(
-                "&#128193; <a href=\"/{}\">{}</a><br>",
+                "<tr><td>&#128193; <a href=\"/{}\">{}</a></td><td class=\"actions\">-</td></tr>",
                 encoded_path,
                 name
             ));
@@ -237,12 +247,15 @@ fn generate_directory_response(dir_path: &Path, tail: &str) -> Vec<u8> {
             let rel_path = Path::new(tail).join(name);
             let encoded_path = url_encode(&rel_path.display().to_string());
             response.push_str(&format!(
-                "&#128196; <a href=\"/{}\">{}</a><br>",
+                "<tr><td>&#128196; {}</td><td class=\"actions\"><a href=\"/{}\" download>Download</a><a href=\"/{}\">View Raw</a></td></tr>",
+                name,
                 encoded_path,
-                name
+                encoded_path
             ));
         }
     }
+
+    response.push_str("</tbody></table>");
 
     response.push_str("</body></html>");
 
