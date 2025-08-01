@@ -28,3 +28,13 @@ jobs:
 
       - name: Run tests
         run: cargo test --release
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: RustWebExplorer-${{ matrix.os }}
+          path: |
+            target/release/RustWebExplorer*
+            target/release/*.dll
+            target/release/*.so
+            target/release/*.dylib
