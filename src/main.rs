@@ -152,7 +152,9 @@ fn handle_request(request: &str) -> String {
 }
 
 fn main() -> std::io::Result<()> {
-    let listener = TcpListener::bind("127.0.0.1:8080")?;
+    let addr = "127.0.0.1:8080";
+    let listener = TcpListener::bind(addr)?;
+    println!("Web server running at http://{}/", addr);
 
     for stream in listener.incoming() {
         match stream {
