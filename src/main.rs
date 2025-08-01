@@ -91,6 +91,7 @@ fn parse_requested_path(request: &str) -> Option<PathBuf> {
 fn get_mime_type(file_path: &Path) -> &'static str {
     if let Some(extension) = file_path.extension().and_then(|ext| ext.to_str()) {
         match extension.to_lowercase().as_str() {
+            // Image types
             "jpg" | "jpeg" => "image/jpeg",
             "png" => "image/png",
             "gif" => "image/gif",
@@ -99,6 +100,16 @@ fn get_mime_type(file_path: &Path) -> &'static str {
             "svg" => "image/svg+xml",
             "ico" => "image/x-icon",
             "tiff" | "tif" => "image/tiff",
+            // Video types
+            "mp4" => "video/mp4",
+            "webm" => "video/webm",
+            "ogg" => "video/ogg",
+            "mov" => "video/quicktime",
+            "avi" => "video/x-msvideo",
+            "mkv" => "video/x-matroska",
+            "wmv" => "video/x-ms-wmv",
+            "flv" => "video/x-flv",
+            "m4v" => "video/x-m4v",
             _ => "text/plain",
         }
     } else {
@@ -117,11 +128,22 @@ fn is_image_file(file_path: &Path) -> bool {
     }
 }
 
+fn is_video_file(file_path: &Path) -> bool {
+    if let Some(extension) = file_path.extension().and_then(|ext| ext.to_str()) {
+        matches!(
+            extension.to_lowercase().as_str(),
+            "mp4" | "webm" | "ogg" | "mov" | "avi" | "mkv" | "wmv" | "flv" | "m4v"
+        )
+    } else {
+        false
+    }
+}
+
 fn generate_file_response(file_path: &Path) -> Vec<u8> {
     let mime_type = get_mime_type(file_path);
     
-    if is_image_file(file_path) {
-        // Handle image files as binary
+    if is_image_file(file_path) || is_video_file(file_path) {
+        // Handle image and video files as binary
         match fs::read(file_path) {
             Ok(contents) => {
                 let header = format!(
@@ -133,7 +155,7 @@ fn generate_file_response(file_path: &Path) -> Vec<u8> {
                 response.extend_from_slice(&contents);
                 response
             }
-            Err(_) => "HTTP/1.1 500 Internal Server Error\r\n\r\nError reading image file".as_bytes().to_vec(),
+            Err(_) => format!("HTTP/1.1 500 Internal Server Error\r\n\r\nError reading {} file", if is_image_file(file_path) { "image" } else { "video" }).as_bytes().to_vec(),
         }
     } else {
         // Handle text files
