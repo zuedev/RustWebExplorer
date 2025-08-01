@@ -88,13 +88,63 @@ fn parse_requested_path(request: &str) -> Option<PathBuf> {
     None
 }
 
+fn get_mime_type(file_path: &Path) -> &'static str {
+    if let Some(extension) = file_path.extension().and_then(|ext| ext.to_str()) {
+        match extension.to_lowercase().as_str() {
+            "jpg" | "jpeg" => "image/jpeg",
+            "png" => "image/png",
+            "gif" => "image/gif",
+            "bmp" => "image/bmp",
+            "webp" => "image/webp",
+            "svg" => "image/svg+xml",
+            "ico" => "image/x-icon",
+            "tiff" | "tif" => "image/tiff",
+            _ => "text/plain",
+        }
+    } else {
+        "text/plain"
+    }
+}
+
+fn is_image_file(file_path: &Path) -> bool {
+    if let Some(extension) = file_path.extension().and_then(|ext| ext.to_str()) {
+        matches!(
+            extension.to_lowercase().as_str(),
+            "jpg" | "jpeg" | "png" | "gif" | "bmp" | "webp" | "svg" | "ico" | "tiff" | "tif"
+        )
+    } else {
+        false
+    }
+}
+
 fn generate_file_response(file_path: &Path) -> String {
-    match fs::read_to_string(file_path) {
-        Ok(contents) => format!(
-            "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\n{}",
-            contents
-        ),
-        Err(_) => "HTTP/1.1 500 Internal Server Error\r\n\r\nError reading file".to_string(),
+    let mime_type = get_mime_type(file_path);
+    
+    if is_image_file(file_path) {
+        // Handle image files as binary
+        match fs::read(file_path) {
+            Ok(contents) => {
+                let mut response = format!(
+                    "HTTP/1.1 200 OK\r\nContent-Type: {}\r\nContent-Length: {}\r\n\r\n",
+                    mime_type,
+                    contents.len()
+                );
+                // Convert binary data to string for HTTP response
+                // Note: This is a simple approach; a proper HTTP server would handle binary differently
+                response.push_str(&String::from_utf8_lossy(&contents));
+                response
+            }
+            Err(_) => "HTTP/1.1 500 Internal Server Error\r\n\r\nError reading image file".to_string(),
+        }
+    } else {
+        // Handle text files
+        match fs::read_to_string(file_path) {
+            Ok(contents) => format!(
+                "HTTP/1.1 200 OK\r\nContent-Type: {}\r\n\r\n{}",
+                mime_type, contents
+            ),
+            Err(_) => "HTTP/1.1 500 Internal Server Error\r\n\r\nError reading file".to_string(),
+        }
     }
 }
 
