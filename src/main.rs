@@ -80,7 +80,12 @@ fn generate_directory_response(dir_path: &Path, tail: &str) -> String {
         <html>
         <head>
             <style>
-                body {{ font-family: monospace; }}
+                body {{ font-family: monospace; background: #fff; color: #111; }}
+                a {{ color: #0000ff; }}
+                @media (prefers-color-scheme: dark) {{
+                    body {{ background: #111111; color: #ffffff; }}
+                    a {{ color: #00ff00; }}
+                }}
             </style>
         </head>
         <body>
