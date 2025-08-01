@@ -247,7 +247,7 @@ fn generate_directory_response(dir_path: &Path, tail: &str) -> Vec<u8> {
             let rel_path = Path::new(tail).join(name);
             let encoded_path = url_encode(&rel_path.display().to_string());
             response.push_str(&format!(
-                "<tr><td>&#128196; {}</td><td class=\"actions\"><a href=\"/{}\" download>Download</a><a href=\"/{}\">View Raw</a></td></tr>",
+                "<tr><td>&#128196; {}</td><td class=\"actions\"><a href=\"/{}\" download>Download</a><a href=\"/{}\">View</a></td></tr>",
                 name,
                 encoded_path,
                 encoded_path
