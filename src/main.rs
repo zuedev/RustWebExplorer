@@ -89,7 +89,7 @@ fn generate_directory_response(dir_path: &Path, tail: &str) -> String {
             </style>
         </head>
         <body>
-        <h1>Contents of: {}</h1>",
+        <h1>{}</h1>",
         if dir_path.display().to_string().contains(r"\\?\") {
             "<abbr title=\"'\\\\?\\' is a Windows MAX_PATH feature that allows paths longer than 260 characters\">".to_string() + &dir_path.display().to_string() + "</abbr>"
         } else {
