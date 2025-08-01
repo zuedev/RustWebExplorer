@@ -1,5 +1,7 @@
 # Rust Web Explorer
 
+> A simple HTTP server for browsing files and directories in Rust.
+
 Rust Web Explorer is a simple HTTP server designed to serve files and directories from the current working directory. It provides an intuitive way to navigate directories and view files directly in your browser.
 
 ## Developer Notes
